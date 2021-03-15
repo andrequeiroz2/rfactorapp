@@ -1,0 +1,9 @@
+export CONFIGURATION_SETUP="rsc.config.config.DevelopmentConfig"
+
+pytest -v
+
+pytest test/ -v --cov=rfactorapp
+
+coverage html
+
+google chrome stable target/doc/foo/index.html
