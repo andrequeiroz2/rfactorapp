@@ -5,7 +5,7 @@ from mongoengine.errors import (
     DoesNotExist,
     MultipleObjectsReturned,
 )
-from bson.json_util import dumps, loads 
+ 
 
 message_200  = {
     "status": 200,
@@ -26,47 +26,64 @@ message_empty = {
     "data": [None]
 }
 
+message_200_paginate  = {
+    "status": 200,
+    "msg": "Successfully",
+    "data": "",
+    "paginate": ""
+}
+
+
 def query_response_success(result):
     task = json.loads(result)
-    print(task)
     if not task:
         return message_empty
-    return response_success(task)
-
-
-def response_success(task):
     message_200["data"] = task
     return message_200
+    
 
+def query_reponse_paginate_success(result, paginate):
+    task = json.loads(result)
+    if not task:
+        return message_empty
+    message_200_paginate["data"] = task
+    message_200_paginate["paginate"] = paginate
+    return message_200_paginate
+    
 
 def query_response_error(info):
-    return response_error(info)
-
-
-def response_error(info):
     message_400["info"] = info
     return message_400
-
+    
+    
 
 def paginate(page, per_page):
     _p = {}
     if page == None and int(page) > 0:
-        print('page none')
         page = 1
     if per_page == None and int(per_page) > 0:
-        print('per_page none')
         per_page = 10
-
+            
     t_page = Tasks.objects.paginate(page=int(page), per_page=int(per_page))
-
     _p['current'] = t_page.page
     _p['total_page'] = t_page.pages
     _p['per_page'] = t_page.per_page
     _p['total_item'] = t_page.total
-
-    #for items in t_page.items:
-    _p['items'] = t_page.items
     return _p
+
+
+def get_paginate(page, per_page):
+    p = int(page)
+    per = int(per_page) 
+
+    if page == None and p > 0:
+        p = 1
+    if per_page == None and per > 0:
+        per = 10
+
+    offset = (p - 1) * per
+    result = Tasks.objects.skip(offset).limit(int(per)).to_json()
+    return result
 
 
 def unique_name(name):
