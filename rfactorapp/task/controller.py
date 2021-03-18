@@ -1,324 +1,305 @@
+import re
 import json
 from flask import request
-from mongoengine.queryset.visitor import Q
-import re
-
 from rfactorapp.task.model import Tasks
+from mongoengine.queryset.visitor import Q
+from mongoengine.errors import (
+    DoesNotExist,
+    MultipleObjectsReturned,
+)
 
+
+message_200  = {
+    "status": 200,
+    "msg": "Successfully",
+    "data": ""
+}
+
+message_400 = {
+    "status": 400,
+    "msg": "Error",
+    "error": "Incorrect parameter",
+    "info": ""
+}
+
+message_empty = {
+    "status": 200,
+    "msg": "Search returned zero result",
+    "data": [None]
+}
+
+def query_response_success(result):
+    task = json.loads(result)
+    if not task:
+        return message_empty
+    return response_success(task)
+
+
+def response_success(task):
+    message_200["data"] = task
+    return message_200
+
+
+def query_response_error(info):
+    return response_error(info)
+
+
+def response_error(info):
+    message_400["info"] = info
+    return message_400
+    
 
 def task_get_all():
     status = request.args.get('status')
     order = request.args.get('order')
     sort = request.args.get('sort')
     search = request.args.get('s')
-    error = {}
+    page = request.args.get('page')
 
-    # GET /tasks?status=closed  (retornar varias tasks, porém apenas as com status=closed) controller ok // test ok
-    # GET /tasks?sort=status&order=asc  (vai trazer ) query {sort: {status: -1} // ok
-    # GET /tasks?sort=status&order=desc  (vai trazer ) query {sort: {status: 1} ok
-    # GET /tasks?sort=name&order=asc  (ordenar ALFABETICA pelo nome da task  ) query {sort: {name: -1} ok
-    # GET /tasks?status=open&sort=name&order=asc  (ordenar ALFABETICA pelo nome da task  ) query {sort: {name: -1} ok
-    # GET /tasks?s=valmir  (search pelo palavra valmir, onde nome ou descricao contenha esta referencia) dica mongo (REGEX) controller ok // test ok
-    # GET /tasks?s=valmir&status=open&sort=createdAt&order=desc ok
+    per_page = request.args.get('limit')
+
+    print(page)
+
+    p = paginate(page, per_page)
+    print(p)
+    # GET /tasks?page=1&limit=10 (registros do 1 a 10 (10 primeiros registros))
+    # GET /tasks?page=2&limit=10 (registros do 11 a 20 (segundo pagina de registros))
+    # GET /tasks?page=2&limit=10&s=valmir&status=open&sort=createdAt&order=desc
+
 
     if status is None and order is None and sort is None and search is None:
-        tasks = Tasks.objects.all().to_json()
-        task_list = json.loads(tasks)
-        if not task_list:
-            error['message'] = "Search returned zero result"
-            return json.dumps(error)
-        else:
-            return tasks
+        
+        result = Tasks.objects.all().to_json()
+        return query_response_success(result)
+
+    
 
     if status is not None and order is None and sort is None and search is None:
-        if status == 'open' or status == 'closed':
-            tasks = Tasks.objects(status=status).to_json()
-            task_list = json.loads(tasks)
-            if not task_list:
-                error['message'] = "Search returned zero result"
-                return json.dumps(error)
-            else:
-                return tasks
-        else:
-            error['message'] = "Error invalid request"
-            error['error'] = ["status unrecognized value "]
-            error['info'] = ["accepted values for status: open (open tasks) or closed (closed tasks)"]
-            return json.dumps(error)
+        if status != 'open' and status != 'closed':
+            info = ["Values for status: open or closed"]
+            return query_response_error(info)
+
+        result = Tasks.objects(status=status).to_json()
+        return query_response_success(result)
+        
 
     if status is None and order is not None and sort is not None and search is None:
-        if sort == 'id' or sort == 'name' or sort == 'description' or sort == 'status' or sort == 'createtad':
-            if order == 'asc':
-                sort_asc = ('-'+sort)
-                tasks = Tasks.objects().order_by(sort_asc).to_json()
-                task_list = json.loads(tasks)
-                if not task_list:
-                    error['message'] = "Search returned zero result"
-                    return json.dumps(error)
-                else:
-                    return tasks
-            elif order == 'desc':
-                tasks = Tasks.objects().order_by(sort).to_json()
-                task_list = json.loads(tasks)
-                if not task_list:
-                    error['message'] = "Search returned zero result"
-                    return json.dumps(error)
-                else:
-                    return tasks
-            else:
-                error['message'] = "Error invalid request"
-                error['error'] = ["order unrecognized value "]
-                error['info'] = ["accepted values for order: asc (ascending) or desc (descending)"]
-                return json.dumps(error)
-        else:
-            error['message'] = "Error invalid request"
-            error['error'] = ["sort unrecognized value "]
-            error['info'] = ["accepted values for sort: id (sort id) or description (sort description) or createtad (sort createtad)"]
-            return json.dumps(error)
+        if sort != 'id' and sort != 'name' and sort != 'description' and sort != 'status' and sort != 'createtad':
+            info = ["Values for sort: id or description"]
+            return query_response_error(info)
+
+        if order != 'asc' and order != 'desc':
+            info = ["Values for order: asc or desc"]
+            return query_response_error(info)
+
+        if order == 'asc':
+            sort = ('-'+sort)
+            result = Tasks.objects().order_by(sort).to_json()
+            return query_response_success(result)
+
+        if order == 'desc':
+            result = Tasks.objects().order_by(sort).to_json()
+            return query_response_success(result)
+    
 
     if status is not None and order is not None and sort is not None and search is None:
-        if status != 'open' or status != 'closed':
-            error['message'] = "Error invalid request"
-            error['error'] = ["status unrecognized value "]
-            error['info'] = ["accepted values for status: open (open tasks) or closed (closed tasks)"]
-            return json.dumps(error)
-        elif sort != 'id' or sort != 'name' or sort != 'description' or sort != 'status' or sort != 'createtad':
-            error['message'] = "Error invalid request"
-            error['error'] = ["sort unrecognized value "]
-            error['info'] = ["accepted values for sort: id (sort id) or description (sort description) or createtad (sort createtad)"]
-            return json.dumps(error)
-        elif order != 'asc' or order != 'desc':
-            error['message'] = "Error invalid request"
-            error['error'] = ["order unrecognized value "]
-            error['info'] = ["accepted values for order: asc (ascending) or desc (descending)"]
-            return json.dumps(error)
-        else:
-            if order == 'asc':
-                sort_asc = ('-' + sort)
-                tasks = Tasks.objects(status=status, sort=sort).order_by(sort_asc).to_json()
-                task_list = json.loads(tasks)
-                if not task_list:
-                    error['message'] = "Search returned zero result"
-                    return json.dumps(error)
-                else:
-                    return tasks
-            else:
-                tasks = Tasks.objects(status=status, sort=sort).order_by(sort).to_json()
-                task_list = json.loads(tasks)
-                if not task_list:
-                    error['message'] = "Search returned zero result"
-                    return json.dumps(error)
-                else:
-                    return tasks
+        if status != 'open' and status != 'closed':
+            info = ["Values for status: open or closed"]
+            return query_response_error(info)
+
+        if sort != 'id' and sort != 'name' and sort != 'description' and sort != 'status' and sort != 'createtad':
+            info = ["Values for sort: id or description or createtad"]
+            return query_response_error(info)
+
+        if order != 'asc' and order != 'desc':
+            info = ["Values for order: asc or desc"]
+            return query_response_error(info)
+    
+        if order == 'asc':
+            sort_asc = ('-'+sort)
+            result = Tasks.objects(status=status, sort=sort).order_by(sort_asc).to_json()
+            return query_response_success(result)
+
+        result = Tasks.objects(status=status, sort=sort).order_by(sort).to_json()
+        return query_response_success(result)
+        
 
     if status is None and order is None and sort is None and search is not None:
-        tasks = Tasks.objects(Q(name=re.compile('.*'+ search +'.*', re.IGNORECASE)) | Q(description=re.compile('.*'+ search +'.*', re.IGNORECASE))).to_json()
-        task_list = json.loads(tasks)
-        if not task_list:
-            error['message'] = "Search returned zero result"
-            error['error'] = ["value "+search+" not found"]
-            return json.dumps(error)
-        else:
-            return tasks
+        result = Tasks.objects(Q(name=re.compile('.*'+ search +'.*', re.IGNORECASE)) | Q(description=re.compile('.*'+ search +'.*', re.IGNORECASE))).to_json()
+        return query_response_success(result)
+
 
     if status is not None and order is not None and sort is not None and search is None:
-        if sort != 'id' or sort != 'name' or sort != 'description' or sort != 'status' or sort != 'createtad':
-            error['message'] = "Error invalid request"
-            error['error'] = ["order unrecognized value "]
-            error['info'] = ["accepted values for order: asc (ascending) or desc (descending)"]
-            return json.dumps(error)
+        if sort != 'id' and sort != 'name' and sort != 'description' and sort != 'status' and sort != 'createtad':
+            info = ["Values for order: asc or desc"]
+            return query_response_error(info)
 
-        elif status != 'open' or status != 'closed':
-            error['message'] = "Error invalid request"
-            error['error'] = ["status unrecognized value "]
-            error['info'] = ["accepted values for status: open (open tasks) or closed (closed tasks)"]
-            return json.dumps(error)
+        if status != 'open' and status != 'closed':
+            info = ["Values for status: open or closed"]
+            return query_response_error(info)
 
-        elif order != 'asc' or order != 'desc':
-            error['message'] = "Error invalid request"
-            error['error'] = ["order unrecognized value "]
-            error['info'] = ["accepted values for order: asc (ascending) or desc (descending)"]
-            return json.dumps(error)
+        if order != 'asc' and order != 'desc':
+            info = ["Values for order: asc or desc"]
+            return query_response_error(info)
 
-        else:
-            if order == 'asc':
-                sort_asc = ('-' + sort)
-                tasks = Tasks.objects(Q(name=re.compile('.*' + search + '.*', re.IGNORECASE)) | Q(description=re.compile('.*' + search + '.*', re.IGNORECASE)) & Q(status=status)).order_by(sort_asc).to_json()
-                task_list = json.loads(tasks)
-                if not task_list:
-                    error['message'] = "Search returned zero result"
-                    return json.dumps(error)
-                else:
-                    return tasks
-            else:
-                tasks = Tasks.objects(Q(name=re.compile('.*' + search + '.*', re.IGNORECASE)) | Q(description=re.compile('.*' + search + '.*', re.IGNORECASE)) & Q(status=status)).order_by(sort).to_json()
-                task_list = json.loads(tasks)
-                if not task_list:
-                    error['message'] = "Search returned zero result"
-                    return json.dumps(error)
-                else:
-                    return tasks
-
+        if order == 'asc':
+            sort_asc = ('-' + sort)
+            result = Tasks.objects(Q(name=re.compile('.*' + search + '.*', re.IGNORECASE)) | Q(description=re.compile('.*' + search + '.*', re.IGNORECASE)) & Q(status=status)).order_by(sort_asc).to_json()
+            return query_response_success(result)
+        
+        result = Tasks.objects(Q(name=re.compile('.*' + search + '.*', re.IGNORECASE)) | Q(description=re.compile('.*' + search + '.*', re.IGNORECASE)) & Q(status=status)).order_by(sort).to_json()
+        return query_response_success(result)
+        
 
 def task_get_name(name):
     task = Tasks.objects(name=name).to_json()
     return task
 
 
-def get_order_insert(order):
-    if order == 1 or order == -1:
-        task = Tasks.find().sort({id: 1}).to_json()
-        print(task)
-        return task
-    else:
-        return "error: "
-
-
 def task_post(body):
-    resp = {}
-    _name = body["name"]
-    _description = body["description"]
+    name = body["name"]
+    description = body["description"]
 
-    if task_check_unique_name_post(_name):
-        check = task_check_input(body)
-        if not bool(check):
-            Tasks(name=_name, description=_description).save()
-            task = task_get_name(_name)
-            resp["message"] = "Successfully registered task"
-            resp["data"] = json.loads(task)
-            return resp
-        else:
-            resp["message"] = "Error task not registered"
-            resp["error"] = ["Name task "+check+" em uso"]
-            return resp
-    else:
-        resp["message"] = "Error task not registered"
-        resp["error"] = ["Task name is already in use"]
-        return resp
+    if unique_name(name):
+        info = ["Task name is already in use"]
+        return query_response_error(info)
 
+    info = check_input(body)
+    if not info[0]:
+        return query_response_error(info[1])
+        
+    save_task(name, description)
+    result = get_task(name, description)
+    return query_response_success(result)
+    
 
-def task_post2(body):
-    resp = {}
-    _name = body["name"]
-    _description = body["description"]
-
-    if not task_check_unique_name_post(_name):
-        resp["message"] = "Error task not registered"
-        resp["error"] = ["Task name is already in use"]
-        return resp
-
-    check = task_check_input(body)
-    if not bool(check):
-        resp["message"] = "Error task not registered"
-        resp["error"] = ["Name task "+check+" em uso"]
-        return resp
-
-    Tasks(name=_name, description=_description).save()
-    task = task_get_name(_name)
-    resp["message"] = "Successfully registered task"
-    resp["data"] = json.loads(task)
-    return resp
-
-
-def task_check_input(body):
-    _name = body["name"]
-    _desc = body["description"]
-    analyzer = {}
-
-    if len(_name) >= 3:
-        pass
-    else:
-        analyzer["name"] = "Name must contain 3 or more digits"
-
-    if len(_name) <= 30:
-        pass
-    else:
-        analyzer["name"] = "Name must contain less than 30 digits"
-
-    if _name and not _name.isspace():
-        pass
-    else:
-        analyzer["name"] = "Name does not contain valid information"
-
-    if len(_desc) >= 3:
-        pass
-    else:
-        analyzer["description"] = "Description must contain 3 or more digits"
-
-    if len(_name) <= 200:
-        pass
-    else:
-        analyzer["description"] = "Description must contain less than 200 digits"
-
-    if _desc and not _desc.isspace():
-        pass
-    else:
-        analyzer["description"] = "Description does not contain valid information"
-
-    tca = task_check_analyzer(analyzer)
-    return tca
-
-
-def task_check_analyzer(analyzer):
-    error = {}
-    if not bool(analyzer):
-        return error
-    else:
-        error["error"] = analyzer
-        return error
-
-def task_check_json(json_obj):
-    _json = json.loads(json_obj)
-    if 'error' not in _json:
-        return True
-    else:
+def unique_name(name):
+    try:
+        task = Tasks.objects.get(name=name)
+    except DoesNotExist:
         return False
+    except MultipleObjectsReturned:
+        return False
+    return True
 
 
-def task_put(id, body):
-    resp = {}
-    task = task_get_id(id)
-    print('Task ID :', task)
-    task_list = json.loads(task)
-    if not task_list:
-        resp["message"] = "Error Task not updated"
-        resp["error"] = ["Task id not found"]
-        return json.dumps(resp)
-    else:
-        name = body['name']
-        print('Name Task :', name)
-        if task_check_unique_name(id, name):
-            tasks_up = Tasks.objects.get(id=id).update(**body)
-            tasks = Tasks.objects.get(id=id, name=name).to_json()
-            resp["message"] = "Successfully task updated"
-            resp["data"] = json.loads(tasks)
-            return resp
-        else:
-            resp["message"] = "Error Task not updated"
-            resp["error"] = ["Task name is already in use"]
-            return resp
+def check_input(body):
+    name = body["name"]
+    desc = body["description"]
+    
+    if len(name) < 3 or len(name) > 30:
+        info = "Name min 3 digits and max 30 digits"
+        return [False, info]
+
+    if not name and name.isspace():
+        info = "Name does not contain valid data"
+        return [False, info]
+
+    if len(desc) < 3 or len(desc) > 200:
+        info = "Description min 3 digits and max 200 digits"
+        return [False, info]
+
+    if not desc and desc.isspace():
+        info = "Description does not valid data"
+        return [False, info]
+
+    return [True]
 
 
-def task_get_id(id):
-    task = Tasks.objects.get(id=id).to_json()
+def save_task(name, description):
+    Tasks(name=name, description=description).save()
+
+
+def get_task(name, description):
+    task = Tasks.objects.get(name=name, description=description).to_json()
     return task
 
 
-def task_check_unique_name_post(name):
-    task = Tasks.objects(name=name)
-    if not bool(task):
-        return True
-    else:
-        return False
+def task_put(id, body):
+    name = body['name']
+    desc = body['description']
 
+    if not task_get_id(id):
+        info = ["Task not found"]
+        return query_response_error(info)
+    
+    if not task_check_unique_name(id, name):
+        info = ["Task name is already in use"]
+        return query_response_error(info)
+
+    update_task(id, body)
+    result = get_task(name, desc)
+    return query_response_success(result)
+    
+
+def task_get_id(id):
+    try:
+        task = Tasks.objects.get(id=id).to_json()
+        return True
+    except (DoesNotExist, MultipleObjectsReturned):
+        return False
+    
 
 def task_check_unique_name(id, name):
     count = Tasks.objects(Q(name=name) & Q(id__ne=id)).count()
-    if count == 0:
-        return True
-    else:
+    if count != 0:
         return False
+    return True
+
+
+def update_task(id, body):
+    tasks = Tasks.objects.get(id=id).update(**body)
 
 
 def task_count():
     count = Tasks.objects.count()
     return count
+
+
+def get_id(id):
+    try:
+        result = Tasks.objects.get(id=id).to_json()
+        return query_response_success(result)
+    except (DoesNotExist, MultipleObjectsReturned):
+        info = ["Task not found"]
+        return query_response_error(info)
+    
+
+def get_id_for_name(name):
+    try:
+        res = Tasks.objects.get(name=name).to_json()
+        result = json.loads(res) 
+        return result["_id"]["$oid"]
+    except (DoesNotExist, MultipleObjectsReturned):
+        info = ["Task not found"]
+        return query_response_error(info)
+    
+
+def task_delete(id):
+    if not task_get_id(id):
+        info = ["Task not found"]
+        return query_response_error(info)
+    result = Tasks.objects.get(id=id).to_json()
+    delete_id(id)
+    return query_response_success(result)
+
+
+def delete_id(id):
+    Tasks.objects(id=id).delete()
+
+
+def paginate(page, per_page):
+    _p = {}
+    if page == None:
+        page = 1
+    if per_page == None:
+        per_page = 10
+
+    t_page = Tasks.objects.paginate(page=page, per_page=per_page)
+
+    _p['current'] = t_page.page
+    _p['total_page'] = t_page.pages
+    _p['per_page'] = t_page.per_page
+    _p['total_item'] = t_page.total
+    _p['items'] = t_page.items
+    return _p

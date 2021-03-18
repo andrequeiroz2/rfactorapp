@@ -9,8 +9,8 @@ def app():
     mongo = db.get_db()
     return app
 
+
 @pytest.fixture(autouse=True)
 def database():
     mongo = db.get_db()
-    print('mongo')
     yield mongo
