@@ -55,6 +55,7 @@ def query_response_error(info):
     message_400["info"] = info
     return message_400
     
+    
 
 def paginate(page, per_page):
     _p = {}
