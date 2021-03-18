@@ -1,4 +1,4 @@
-export CONFIGURATION_SETUP="rsc.config.config.DevelopmentConfig"
+export CONFIGURATION_SETUP="rfactorapp.config.DevelopmentConfig"
 
 pytest -v
 

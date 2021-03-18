@@ -3,10 +3,8 @@ class BaseConfig(object):
     Base Config
     """
     DEBUG = False
-    MONGO_URI = "mongo_uri"
-    MONGODB_DB = "challeger"
-    MONGODB_HOST = '0.0.0.0'
-    MONGODB_PORT = 27017
+    MONGO_DBNAME = 'rfactor'
+    MONGO_URI = "mongodb://localhost:27017/rfactor"
 
 
 class DevelopmentConfig(BaseConfig):
