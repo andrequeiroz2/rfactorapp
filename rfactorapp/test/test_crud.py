@@ -1,5 +1,5 @@
 import json
-from rfactorapp.task.controller import task_count, get_id_for_name
+from rfactorapp.task.accessory import task_count, get_id_for_name
 
 
 def test_get_all(client):

@@ -1,13 +1,11 @@
 import json
 from flask_restful import Resource
 from flask import Response, request
-from rfactorapp.task.controller import (
-    task_post, 
-    task_get_all, 
-    task_put, 
-    get_id,
-    task_delete
-)
+from rfactorapp.task.post import task_post
+from rfactorapp.task.get_all import task_get_all
+from rfactorapp.task.get_one import get_id
+from rfactorapp.task.put import task_put
+from rfactorapp.task.delete import task_delete 
 
 
 class TaskApi(Resource):
