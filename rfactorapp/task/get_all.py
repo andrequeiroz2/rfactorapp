@@ -6,7 +6,9 @@ from mongoengine.queryset.visitor import Q
 from rfactorapp.task.accessory import (
     paginate,
     query_response_success,
-    query_response_error
+    query_reponse_paginate_success,
+    query_response_error,
+    get_paginate
 )
 
 
@@ -26,9 +28,11 @@ def task_get_all():
 
     if status is None and order is None and sort is None and search is None:
         
-        #if page is not None or per_page is not None:
-        #    result = paginate(page, per_page)
-        #    return query_response_success(result)
+        if page is not None or per_page is not None:
+            _page = paginate(page, per_page)
+            _result = get_paginate(page, per_page)
+            return query_reponse_paginate_success(_result, _page)
+            #return query_response_success(result)
         
         result = Tasks.objects.all().to_json()
         return query_response_success(result)
