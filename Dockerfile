@@ -7,17 +7,17 @@ WORKDIR /usr/src/app
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-ENV FLASK_APP=main
+ENV FLASK_APP=app
 ENV CONFIGURATION_SETUP="rfactorapp.config.DevelopmentConfig"
 
 # install dependencies
 RUN pip install --upgrade pip
-COPY ./requirements.txt /usr/src/app/requirements.txt
+COPY ./rfactorapp/requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
-ADD . /usr/src/app/
-
 # copy project
-COPY . /usr/src/app/
+COPY . .
 
 EXPOSE 5000
+
+CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0"]

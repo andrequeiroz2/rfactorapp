@@ -1,21 +1,21 @@
-version: '3'
+version: '3.4'
 
 services:
   web:
     build:
-      context: rfactorapp
+      context: .
       dockerfile: Dockerfile
     container_name: app_andre
-  
+    network_mode: host 
     tty: true
-    ports:
-      - "5000:5000"
+    #ports:
+    #  - "5000:5000"
+
     
+
     environment:
-      FLASK_APP: "manage"
       CONFIGURATION_SETUP: rfactorapp.config.DevelopmentConfig
     
-    
-    volumes:
-      - ./rfactor/:/usr/src/app/
+    #volumes:
+    #  - ./rfactor/:/usr/src/app/
     
