@@ -5,17 +5,33 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: app_andre
-    network_mode: host 
+    container_name: andre_app
     tty: true
-    #ports:
-    #  - "5000:5000"
-
-    
-
+    ports:
+      - "5000:5000"
     environment:
       CONFIGURATION_SETUP: rfactorapp.config.DevelopmentConfig
+    volumes:
+      - ./:/usr/src/app
     
-    #volumes:
-    #  - ./rfactor/:/usr/src/app/
+  mongodb:
+    image: mongo
+    container_name: andre_mongo
+    restart: on-failure
+    environment:
+      - MONGODB_DATABASE="test"
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb_data:/data/db
+        
+volumes:
+  mongodb_data:
+    name: andre_mongo_data
+    external: true
+
+networks:
+  default:
+    external:
+      name: andre_network
     
