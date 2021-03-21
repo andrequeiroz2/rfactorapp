@@ -56,7 +56,6 @@ def query_response_error(info):
     return message_400
     
 
-
 def paginate(page, per_page):
     _p = {}
     if page == None and int(page) > 0:
