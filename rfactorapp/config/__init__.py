@@ -17,6 +17,10 @@ class DevelopmentConfig(BaseConfig):
     FLASK_ENV = "development"
     SECRET_KEY = "challengerRfactor"
 
+    MONGODB_SETTINGS = {
+        'host': 'mongodb://mongodb/test',
+    }
+
 
 class TestingConfig(BaseConfig):
     """
