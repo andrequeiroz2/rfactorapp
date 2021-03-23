@@ -26,7 +26,8 @@ class TestingConfig(BaseConfig):
     """
     Test Config
     """
+    ENV = "testing"
     DEBUG = True
     TESTING = True
-    FLASK_ENV = "testing"
+    MONGO_DBNAME = 'rfactor'
     MONGO_URI = "mongodb://localhost:27017/rfactor"
