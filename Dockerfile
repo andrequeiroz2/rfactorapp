@@ -14,11 +14,11 @@ ENV CONFIGURATION_SETUP="rfactorapp.config.DevelopmentConfig"
 # install dependencies
 RUN pip install --upgrade pip
 COPY ./requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # copy project
 COPY . .
 
 EXPOSE 5000
 
-CMD ["python", "main.py"]
+CMD ["gunicorn", "-c", "python:rfactorapp.config.gunicorn", "app:create_app()"]
