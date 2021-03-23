@@ -5,6 +5,7 @@ class BaseConfig(object):
     DEBUG = False
     MONGO_DBNAME = 'rfactor'
     MONGO_URI = "mongodb://localhost:27017/rfactor"
+    SECRET_KEY = "challengerRfactor"
 
 
 class DevelopmentConfig(BaseConfig):
@@ -15,15 +16,17 @@ class DevelopmentConfig(BaseConfig):
     TESTING = True
     DEBUG = True
     FLASK_ENV = "development"
-    SECRET_KEY = "challengerRfactor"
 
     MONGODB_SETTINGS = {
         'host': 'mongodb://mongodb/test',
     }
 
-
+    
 class TestingConfig(BaseConfig):
     """
     Test Config
     """
     DEBUG = True
+    TESTING = True
+    FLASK_ENV = "testing"
+    MONGO_URI = "mongodb://localhost:27017/rfactor"
