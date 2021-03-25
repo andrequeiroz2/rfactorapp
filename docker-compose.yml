@@ -24,12 +24,24 @@ services:
       - 27017:27017
     volumes:
       - mongodb_data:/data/db
-        
+  
+  nginx:
+    build: ./rfactorapp/nginx
+    container_name: andre_nginx
+    restart: always
+    ports:
+      - "81:80"
+    volumes:
+      - nginx_data:/var/log/nginx"
+            
 volumes:
   mongodb_data:
     name: andre_mongo_data
     external: true
-
+  nginx_data:
+    name: andre_nginx_data
+    external: true
+      
 networks:
   default:
     external:
