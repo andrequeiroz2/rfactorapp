@@ -1,4 +1,3 @@
-#FROM python:3.8.1-slim-buster
 FROM python:3.8.8-alpine3.13
 # set work directory
 WORKDIR /usr/src/app
@@ -12,9 +11,10 @@ ENV FLASK_APP=main
 ENV CONFIGURATION_SETUP="rfactorapp.config.DevelopmentConfig"
 
 # install dependencies
-RUN pip install --upgrade pip
+#RUN pip install --upgrade pip
 COPY ./requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip &&\
+    pip install --no-cache-dir -r requirements.txt
 
 # copy project
 COPY . .
